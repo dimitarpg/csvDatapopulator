@@ -122,13 +122,6 @@ public class CsvDataPopulator {
 		StringBuilder valuesBuilder = new StringBuilder();
 
 		for (int i = 0; i < csvCells.size(); i++) {
-			// TODO should i do that at all i think that open csv is doing that by defautl
-			// builder.append(csvCells.get(i).replaceAll("\"", "\'"));
-
-			// for the date values - (TO_DATE('2003/05/03 21:02:44', 'yyyy/mm/dd
-			// hh24:mi:ss'));
-			// my input 21.10.2014 07:47:31
-
 			String cellValue = csvCells.get(i);
 			try {
 				cvsDateFormat.parse(cellValue.replaceAll("\"", ""));
