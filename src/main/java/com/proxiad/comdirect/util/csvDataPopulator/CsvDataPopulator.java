@@ -1,7 +1,6 @@
 package com.proxiad.comdirect.util.csvDataPopulator;
 
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
@@ -13,13 +12,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Scanner;
+
 import org.apache.log4j.Logger;
-import com.opencsv.CSVReader;
 
 public class CsvDataPopulator {
 
 	private static Logger log = Logger.getLogger(CsvDataPopulator.class);
-
 	private static Properties appProperties = new Properties();
 
 	public static void main(String[] args) {
@@ -38,9 +37,9 @@ public class CsvDataPopulator {
 			populateDB(cmdArguments, parcedCSVdoc);
 			log.info("finish db population--");
 
-			log.info("==SUCCESS==");
+			log.info("===SUCCESS==");
 		} catch (Exception e) {
-			log.info("==FAIL==");
+			log.info("===FAIL==");
 			e.printStackTrace();
 		} finally {
 			log.info("finish CVS DATA POPULATOR ");
@@ -49,32 +48,57 @@ public class CsvDataPopulator {
 	}
 
 	private static Map<String, List<String>> processCSVFile(Map<String, String> cmdArguments) throws Exception {
-		CSVReader csvReader = null;
+		Scanner csvReader = null;
+		String csvLine = null;
+		List<String> csvRowCells = null;
+		StringBuilder csvFileBuilder = new StringBuilder();
+
 		Map<String, List<String>> parcedCSVdoc = null;
 		try {
-			csvReader = new CSVReader(new FileReader(cmdArguments.get("-f")), ',', '\'', 0);
+			csvReader = new Scanner(new File(cmdArguments.get("-f")));
 			parcedCSVdoc = new HashMap<String, List<String>>();
 
-			String[] line;
-			String[] columnNames;
-			if ((columnNames = csvReader.readNext()) != null) {
-				log.info("columns: " + Arrays.asList(columnNames));
-				parcedCSVdoc.put("columnNames: ", Arrays.asList(columnNames));
+			// the column line in the file should be well formated
+			if (csvReader.hasNext()) {
+				csvLine = csvReader.nextLine();
+				csvRowCells = Arrays.asList(csvLine.split(appProperties.getProperty("csvCellDelimiterRegex")));
+				if (csvRowCells.size() > 0) {
+					// removes the quotes from the first and the last element
+					removeSymbolsFromACell(csvRowCells, 0, 1, csvRowCells.get(0).length());
+					removeSymbolsFromACell(csvRowCells, csvRowCells.size() - 1, 0,
+							csvRowCells.get(csvRowCells.size() - 1).length() - 1);
+				}
+				parcedCSVdoc.put("columnCells", csvRowCells);
+				log.info("columns(" + csvRowCells.size() + ") read:" + csvRowCells);
 			}
 
-			int dbRow = 0;
-			while ((line = csvReader.readNext()) != null) {
-				parcedCSVdoc.put(String.valueOf(dbRow), Arrays.asList(line));
-				log.info("row value: " + dbRow + " == :" + Arrays.asList(line));
-				dbRow++;
-			}
-		} finally {
-			try {
-				if (csvReader != null) {
-					csvReader.close();
+			int csvDataRow = 0;
+			while (csvReader.hasNext()) {
+				csvLine = csvReader.nextLine();
+				csvFileBuilder.append(csvLine);
+				if (csvLine.charAt(csvLine.length() - 1) == '"') {
+					// A Valid end of the line
+					csvFileBuilder.append(";");
 				}
-			} catch (IOException e) {
-				e.printStackTrace();
+				log.info("csv(" + csvDataRow + ") row read:" + csvLine);
+				csvDataRow++;
+			}
+
+			csvRowCells = Arrays
+					.asList(csvFileBuilder.toString().split(appProperties.getProperty("csvCellDelimiterRegex")));
+			if (csvRowCells.size() > 0) {
+				// removes the quotes from the first and the last element
+				removeSymbolsFromACell(csvRowCells, 0, 1, csvRowCells.get(0).length());
+				removeSymbolsFromACell(csvRowCells, csvRowCells.size() - 1, 0,
+						csvRowCells.get(csvRowCells.size() - 1).length() - 2);
+			}
+			log.info("csv data read:" + csvRowCells);
+
+			parcedCSVdoc.put("dataCells", csvRowCells);
+
+		} finally {
+			if (csvReader != null) {
+				csvReader.close();
 			}
 		}
 		return parcedCSVdoc;
@@ -82,30 +106,31 @@ public class CsvDataPopulator {
 
 	private static void populateDB(Map<String, String> arguments, Map<String, List<String>> parcedCSVdoc)
 			throws Exception {
-		com.proxiad.comdirect.util.csvDataPopulator.JdbcConnection jdbcConnection = JdbcConnection
-				.getInstance(arguments.get("-a"), arguments.get("-u"), arguments.get("-p"));
+		JdbcConnection jdbcConnection = JdbcConnection.getInstance(arguments.get("-a"), arguments.get("-u"),
+				arguments.get("-p"));
 		Connection connection = jdbcConnection.getConnection();
+
 		if (connection != null) {
 			connection.setAutoCommit(false);
 			PreparedStatement insertSt = null;
 
-			String columnNames = formatCSVData(parcedCSVdoc.get("columnNames"));
+			String columnCells = formatCSVData(parcedCSVdoc.get("columnCells"), false);
+			int numberOfColumns = parcedCSVdoc.get("columnCells").size();
 
-			for (int i = 0; i < parcedCSVdoc.values().size(); i++) {
-				String insertValues;
-				List<String> cellValues = parcedCSVdoc.get(String.valueOf(i));
-				if (cellValues != null) {
-					insertValues = formatCSVData(parcedCSVdoc.get(String.valueOf(i)));
-				} else {
-					break;
-				}
+			List<String> dataCells = parcedCSVdoc.get("dataCells");
+			List<String> insertStatementValues;
+			for (int i = 0; i < dataCells.size(); i = i + numberOfColumns) {
+				insertStatementValues = dataCells.subList(i, i + numberOfColumns);
+				String insertValues = formatCSVData(insertStatementValues, true);
+
+				System.out.println("============= insertValues : " + insertValues);
 
 				insertSt = connection.prepareStatement((String) appProperties.get("insertStatement"));
 				insertSt.setString(0, arguments.get("-t"));
-				insertSt.setString(1, columnNames);
+				insertSt.setString(1, columnCells);
 				insertSt.setString(2, insertValues);
 
-				log.info("==================== Execute insert statemet {" + i + "}:" + insertSt.toString());
+				log.info("execute insert statemet{" + i + "}: " + insertSt.toString());
 				insertSt.executeUpdate();
 			}
 
@@ -116,26 +141,32 @@ public class CsvDataPopulator {
 		}
 	}
 
-	private static String formatCSVData(List<String> csvCells) {
+	private static String formatCSVData(List<String> csvCells, boolean surroundWithSingleQuotes) {
+		if (csvCells != null && csvCells.size() > 0) {
+			SimpleDateFormat cvsDateFormat = new SimpleDateFormat(appProperties.getProperty("csvDateFormat"));
+			StringBuilder valuesBuilder = new StringBuilder();
 
-		SimpleDateFormat cvsDateFormat = new SimpleDateFormat(appProperties.getProperty("csvDateFormat"));
-		StringBuilder valuesBuilder = new StringBuilder();
+			for (int i = 0; i < csvCells.size(); i++) {
+				String cellValue = csvCells.get(i);
+				try {
+					cvsDateFormat.parse(cellValue.replaceAll("\"", ""));
+					valuesBuilder.append(" TO_DATE('" + cellValue.replaceAll("\"", "") + "', '"
+							+ appProperties.getProperty("csvDateFormat") + "') ");
+				} catch (ParseException e) {
+					if (surroundWithSingleQuotes) {
+						valuesBuilder.append("'" + cellValue + "'");
+					} else {
+						valuesBuilder.append(cellValue);
+					}
+				}
 
-		for (int i = 0; i < csvCells.size(); i++) {
-			String cellValue = csvCells.get(i);
-			try {
-				cvsDateFormat.parse(cellValue.replaceAll("\"", ""));
-				valuesBuilder.append(" (TO_DATE('" + cellValue.replaceAll("\"", "") + "', '"
-						+ appProperties.getProperty("csvDateFormat") + "') ");
-			} catch (ParseException e) {
-				valuesBuilder.append(cellValue.replaceAll("\"", "\'"));
+				if (i != csvCells.size() - 1) {
+					valuesBuilder.append(",");
+				}
 			}
-
-			if (i != csvCells.size() - 1) {
-				valuesBuilder.append(",");
-			}
-		}
-		return valuesBuilder.toString();
+			return valuesBuilder.toString();
+		} else
+			return null;
 	}
 
 	private static Map<String, String> checkCommandLineArguments(String[] cmdArguments) throws Exception {
@@ -194,5 +225,13 @@ public class CsvDataPopulator {
 			}
 		}
 		return argMap;
+	}
+
+	private static void removeSymbolsFromACell(List<String> cells, int position, int startIndex, int endIndex) {
+		if (cells.size() > 0) {
+			String csvCell = cells.get(position);
+			String formatedCsvCell = csvCell.substring(startIndex, endIndex);
+			cells.set(position, formatedCsvCell);
+		}
 	}
 }
