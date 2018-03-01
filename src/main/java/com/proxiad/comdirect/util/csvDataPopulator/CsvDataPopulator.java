@@ -20,6 +20,7 @@ public class CsvDataPopulator {
 	private static final String PARAM_USER = "-u";
 	private static final String PARAM_PASS = "-p";
 	private static final String PARAM_ADDRESS = "-a";
+	private static final String PARAM_FILE = "-f";
 
 	public static void main(String[] args) {
 		logInfo("========================================================================");
@@ -27,6 +28,7 @@ public class CsvDataPopulator {
 		try {
 			appProperties = new Properties();
 			appProperties.load(CsvDataPopulator.class.getResourceAsStream("app.properties"));
+
 			Map<String, String> cmdArguments = checkCommandLineArguments(args);
 			logInfo("start csv processign--");
 			Map<String, List<String>> parcedCSVdoc = processCSVFile(cmdArguments);
@@ -34,6 +36,7 @@ public class CsvDataPopulator {
 			logInfo("start db population--");
 			populateDB(cmdArguments, parcedCSVdoc);
 			logInfo("finish db population--");
+
 			logInfo("===SUCCESS==");
 		} catch (Exception e) {
 			logInfo("===FAIL==");
@@ -51,8 +54,9 @@ public class CsvDataPopulator {
 		StringBuilder csvFileBuilder = new StringBuilder();
 		Map<String, List<String>> parcedCSVdoc = null;
 		try {
-			csvReader = new Scanner(new File(cmdArguments.get("-f")));
+			csvReader = new Scanner(new File(cmdArguments.get(PARAM_FILE)));
 			parcedCSVdoc = new HashMap<String, List<String>>();
+
 			// the column line in the file should be well formated
 			if (csvReader.hasNext()) {
 				csvLine = csvReader.nextLine();
@@ -66,6 +70,7 @@ public class CsvDataPopulator {
 				parcedCSVdoc.put("columnCells", csvRowCells);
 				logInfo("columns(" + csvRowCells.size() + ") read:" + csvRowCells);
 			}
+
 			int csvDataRow = 0;
 			while (csvReader.hasNext()) {
 				csvLine = csvReader.nextLine();
@@ -80,6 +85,7 @@ public class CsvDataPopulator {
 					logInfo(csvDataRow + " lines read");
 				}
 			}
+
 			logInfo("Total " + csvDataRow + " lines read");
 			csvRowCells = Arrays
 					.asList(csvFileBuilder.toString().split(appProperties.getProperty("csvCellDelimiterRegex")));
@@ -107,6 +113,7 @@ public class CsvDataPopulator {
 		try {
 			JdbcConnection jdbcConnection = JdbcConnection.getInstance(arguments.get(PARAM_ADDRESS),
 					arguments.get(PARAM_USER), arguments.get(PARAM_PASS));
+			
 			connection = jdbcConnection.getConnection();
 			if (arguments.get(PARAM_CLEAR) != null) {
 				stmt = "DELETE FROM " + arguments.get(PARAM_TABLE);
@@ -210,9 +217,9 @@ public class CsvDataPopulator {
 				} else {
 					throw new Exception("Missing argument : -t");
 				}
-				if (cmdArgumentsList.contains("-f")) {
-					key = cmdArgumentsList.get(cmdArgumentsList.indexOf("-f"));
-					value = cmdArgumentsList.get(cmdArgumentsList.indexOf("-f") + 1);
+				if (cmdArgumentsList.contains(PARAM_FILE)) {
+					key = cmdArgumentsList.get(cmdArgumentsList.indexOf(PARAM_FILE));
+					value = cmdArgumentsList.get(cmdArgumentsList.indexOf(PARAM_FILE) + 1);
 					argMap.put(key, value);
 				} else {
 					throw new Exception("Missing argument : -f");
