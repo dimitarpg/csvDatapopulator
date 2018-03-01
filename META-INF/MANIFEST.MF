@@ -3,4 +3,4 @@ Archiver-Version: Plexus Archiver
 Created-By: Apache Maven
 Built-By: d.genov
 Main-Class: com.proxiad.comdirect.util.csvDataPopulator.CsvDataPopulator
-Class-Path: ojdbc6.jar opencsv-4.1.jar common-lang3.jar
+Class-Path: ojdbc6.jar
