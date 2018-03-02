@@ -2,5 +2,5 @@ Manifest-Version: 1.0
 Archiver-Version: Plexus Archiver
 Created-By: Apache Maven
 Built-By: d.genov
-Main-Class: com.proxiad.comdirect.util.csvDataPopulator.CsvDataPopulator
+Main-Class: com.proxiad.comdirect.util.csvtool.CsvTool
 Class-Path: ojdbc6.jar

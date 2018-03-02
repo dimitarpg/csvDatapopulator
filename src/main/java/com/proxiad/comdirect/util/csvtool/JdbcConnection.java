@@ -1,12 +1,14 @@
-package com.proxiad.comdirect.util.csvDataPopulator;
+package com.proxiad.comdirect.util.csvtool;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
+
 
 public class JdbcConnection {
 
@@ -19,7 +21,7 @@ public class JdbcConnection {
 		InputStream propInStream = null;
 		try {
 			dbProperties = new Properties();
-			propInStream = this.getClass().getResourceAsStream("app.properties");
+			propInStream = JdbcConnection.class.getClassLoader().getResourceAsStream("app.properties");
 			dbProperties.load(propInStream);
 
 			String url = dbProperties.getProperty("connectionURL");
@@ -53,10 +55,12 @@ public class JdbcConnection {
 		return instance;
 	}
 
-	public static void closeConnection(Connection con, Statement st) throws SQLException {
-		if (con != null)
-			con.close();
+	public static void closeConnection(Connection con, Statement st, ResultSet rs) throws SQLException {
+		if (rs != null)
+			rs.close();
 		if (st != null)
 			st.close();
+		if (con != null)
+			con.close();
 	}
 }

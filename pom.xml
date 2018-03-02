@@ -11,14 +11,7 @@
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
    </properties>
    <build>
-      <finalName>dFill</finalName>
       <resources>
-         <resource>
-            <directory>src/main/java</directory>
-            <includes>
-               <include>**/*.properties</include>
-            </includes>
-         </resource>
          <resource>
             <directory>src/resources</directory>
             <includes>
@@ -40,7 +33,7 @@
             <configuration>
                <archive>
                   <manifest>
-                     <mainClass>com.proxiad.comdirect.util.csvDataPopulator.CsvDataPopulator</mainClass>
+                     <mainClass>com.proxiad.comdirect.util.csvtool.CsvTool</mainClass>
                   </manifest>
                   <manifestFile>${basedir}/META-INF/MANIFEST.MF</manifestFile>
                </archive>
@@ -48,7 +41,7 @@
                   <descriptorRef>jar-with-dependencies</descriptorRef>
                </descriptorRefs>
                <appendAssemblyId>false</appendAssemblyId>
-               <finalName>dFill</finalName>
+               <finalName>csvTool</finalName>
             </configuration>
          </plugin>
       </plugins>
