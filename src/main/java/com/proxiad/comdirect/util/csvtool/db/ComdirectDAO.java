@@ -1,4 +1,4 @@
-package com.proxiad.comdirect.util.csvtool;
+package com.proxiad.comdirect.util.csvtool.db;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -17,15 +17,46 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import com.proxiad.comdirect.util.csvtool.SimpleAppLogger;
+
 public class ComdirectDAO {
-
 	private Properties appProperties;
+	private Map<String, String> arguments;
+	private SimpleAppLogger appLogger;
 
-	public ComdirectDAO(Properties props) throws IOException {
+	public ComdirectDAO(Properties props, Map<String, String> arguments) throws IOException {
 		this.appProperties = props;
+		this.arguments = arguments;
+		appLogger = SimpleAppLogger.getInstance();
 	}
 
-	public Map<String, List<String>> readDbData(Map<String, String> appInstArguments) throws Exception {
+	public void executeSQLStatements(List<String> sqlStatements) throws Exception {
+		Connection connection = null;
+		PreparedStatement sqlStatemetn = null;
+		try {
+			JdbcConnection jdbcConnection = JdbcConnection.getInstance(
+					this.arguments.get(this.appProperties.get("rParamAddress")),
+					this.arguments.get(this.appProperties.get("rParamUser")),
+					this.arguments.get(this.appProperties.get("rParamPass")));
+
+			connection = jdbcConnection.getConnection();
+
+			for (int i = 0; i < sqlStatements.size(); i++) {
+				String eachSqlstatemetn = sqlStatements.get(i);
+				sqlStatemetn = connection.prepareStatement(eachSqlstatemetn);
+
+//				if (appLogger.getVerboseLevel() > 1) {
+					appLogger.logInfo("execute sql satement {" + i + "}: " + eachSqlstatemetn);
+//				}
+
+				sqlStatemetn.execute();
+			}
+		} finally {
+			JdbcConnection.closeConnection(connection, sqlStatemetn, null);
+		}
+	}
+
+	public Map<String, List<String>> readDbData() throws Exception {
 		Connection connection = null;
 		PreparedStatement selectAllStatement = null;
 		ResultSet resultSet = null;
@@ -34,13 +65,14 @@ public class ComdirectDAO {
 		Map<String, List<String>> dbData = new HashMap<String, List<String>>();
 		try {
 			JdbcConnection jdbcConnection = JdbcConnection.getInstance(
-					appInstArguments.get(appProperties.get("rParamAddress")),
-					appInstArguments.get(appProperties.get("rParamUser")),
-					appInstArguments.get(appProperties.get("rParamPass")));
+					this.arguments.get(this.appProperties.get("rParamAddress")),
+					this.arguments.get(this.appProperties.get("rParamUser")),
+					this.arguments.get(this.appProperties.get("rParamPass")));
 
 			connection = jdbcConnection.getConnection();
 
-			String stmt = String.format(" SELECT * FROM %s ", appInstArguments.get(appProperties.get("rParamTable")));
+			String stmt = String.format(" SELECT * FROM %s ",
+					this.arguments.get(this.appProperties.get("rParamTable")));
 			selectAllStatement = connection.prepareStatement(stmt);
 			resultSet = selectAllStatement.executeQuery(stmt);
 
@@ -58,7 +90,8 @@ public class ComdirectDAO {
 
 			if (columns != null && columns.size() > 0) {
 				dbData.put("dbColumns", columns);
-				SimpleDateFormat cvsDateFormat = new SimpleDateFormat(appProperties.getProperty("csvDateFormatIn"));
+				SimpleDateFormat cvsDateFormat = new SimpleDateFormat(
+						this.appProperties.getProperty("csvDateFormatIn"));
 
 				int dbRowNumber = 0;
 				while (resultSet.next()) {
@@ -115,23 +148,27 @@ public class ComdirectDAO {
 
 	}
 
-	public void writeDbData(Map<String, String> arguments, Map<String, List<String>> data) throws Exception {
+	public void writeDbData(Map<String, List<String>> data) throws Exception {
 		String stmt = null;
 		Connection connection = null;
 		PreparedStatement insertSt = null;
 		try {
 			JdbcConnection jdbcConnection = JdbcConnection.getInstance(
-					arguments.get(appProperties.get("rParamAddress")), arguments.get(appProperties.get("rParamUser")),
-					arguments.get(appProperties.get("rParamPass")));
+					this.arguments.get(this.appProperties.get("rParamAddress")),
+					this.arguments.get(this.appProperties.get("rParamUser")),
+					this.arguments.get(this.appProperties.get("rParamPass")));
 
 			connection = jdbcConnection.getConnection();
 
-			if (arguments.get(appProperties.get("paramClear")) != null) {
-				stmt = "DELETE FROM " + arguments.get(appProperties.get("rParamTable"));
+			if (this.arguments.get(this.appProperties.get("paramClear")) != null) {
+				stmt = "DELETE FROM " + this.arguments.get(this.appProperties.get("rParamTable"));
 				insertSt = connection.prepareStatement(stmt);
 				insertSt.executeUpdate();
 			}
-			connection.setAutoCommit(false);
+
+			if (this.arguments.get(this.appProperties.get("disableTransactions")) != null) {
+				connection.setAutoCommit(false);
+			}
 
 			String columnCells = prepareSqlStatementValues(data.get("columnCells"), false);
 
@@ -144,15 +181,25 @@ public class ComdirectDAO {
 
 				String insertValues = prepareSqlStatementValues(insertStatementValues, true);
 
-				stmt = (String) appProperties.get("insertStatement");
-				stmt = String.format(stmt, arguments.get(appProperties.get("rParamTable")), columnCells, insertValues);
+				stmt = (String) this.appProperties.get("insertStatement");
+				stmt = String.format(stmt, this.arguments.get(this.appProperties.get("rParamTable")), columnCells,
+						insertValues);
 				insertSt = connection.prepareStatement(stmt);
-				// logInfo("execute insert statemet{" + i + "}: " + insertSt.toString());
+
+				if (appLogger.getVerboseLevel() > 1) {
+					appLogger.logInfo("execute insert statemet{" + i + "}: " + insertSt.toString());
+				}
+
 				insertSt.executeUpdate();
 			}
-			connection.commit();
+
+			if (this.arguments.get(this.appProperties.get("disableTransactions")) != null) {
+				connection.commit();
+			}
 		} catch (Exception e) {
-			connection.rollback();
+			if (this.arguments.get(this.appProperties.get("disableTransactions")) != null) {
+				connection.rollback();
+			}
 			throw new Exception("Statement: '" + stmt + "' caused by:", e);
 		} finally {
 			JdbcConnection.closeConnection(connection, insertSt, null);
@@ -161,7 +208,7 @@ public class ComdirectDAO {
 
 	private String prepareSqlStatementValues(List<String> values, boolean surroundWithSingleQuotes) {
 		if (values != null && values.size() > 0) {
-			SimpleDateFormat cvsDateFormat = new SimpleDateFormat(appProperties.getProperty("csvDateFormatIn"));
+			SimpleDateFormat cvsDateFormat = new SimpleDateFormat(this.appProperties.getProperty("csvDateFormatIn"));
 			StringBuilder valuesBuilder = new StringBuilder();
 			for (int i = 0; i < values.size(); i++) {
 				String value = values.get(i);
@@ -174,7 +221,7 @@ public class ComdirectDAO {
 				try {
 					cvsDateFormat.parse(escapedValue);
 					valuesBuilder.append(" TO_DATE('" + escapedValue + "', '"
-							+ appProperties.getProperty("csvDateFormatOut") + "') ");
+							+ this.appProperties.getProperty("csvDateFormatOut") + "') ");
 				} catch (ParseException e) {
 					if (surroundWithSingleQuotes) {
 						valuesBuilder.append("'" + escapedValue + "'");

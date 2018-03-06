@@ -1,4 +1,4 @@
-package com.proxiad.comdirect.util.csvtool;
+package com.proxiad.comdirect.util.csvtool.file;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -13,28 +13,28 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 
-public class CsvFileUtils extends SimpleAppLogger {
+public class CsvFileProcessor extends FileProcessor {
 
-	private Properties appProperties;
-
-	public CsvFileUtils(Properties appProps) throws IOException {
+	public CsvFileProcessor(Properties appProps, Map<String, String> cmdArguments) throws IOException {
 		this.appProperties = appProps;
+		this.cmdArguments = cmdArguments;
 	}
 
-	public Map<String, List<String>> readCsvFile(Map<String, String> cmdArguments) throws Exception {
+	@Override
+	public Map<String, List<String>> readFile() throws Exception {
 		Scanner csvReader = null;
 		String csvLine = null;
 		List<String> csvRowCells = null;
 		StringBuilder csvFileBuilder = new StringBuilder();
 		Map<String, List<String>> parcedCSVdoc = null;
 		try {
-			csvReader = new Scanner(new File(cmdArguments.get(appProperties.get("rParamFile"))));
+			csvReader = new Scanner(new File(this.cmdArguments.get(this.appProperties.get("rParamFile"))));
 			parcedCSVdoc = new HashMap<String, List<String>>();
 
 			// the column line in the file should be well formated
 			if (csvReader.hasNext()) {
 				csvLine = csvReader.nextLine();
-				csvRowCells = Arrays.asList(csvLine.split(appProperties.getProperty("csvCellDelimiterRegex")));
+				csvRowCells = Arrays.asList(csvLine.split(this.appProperties.getProperty("csvCellDelimiterRegex")));
 				if (csvRowCells.size() > 0) {
 					// removes the quotes from the first and the last element
 					this.removeSymbolsFromACell(csvRowCells, 0, 1, csvRowCells.get(0).length());
@@ -42,7 +42,7 @@ public class CsvFileUtils extends SimpleAppLogger {
 							csvRowCells.get(csvRowCells.size() - 1).length() - 1);
 				}
 				parcedCSVdoc.put("columnCells", csvRowCells);
-				logInfo("columns(" + csvRowCells.size() + ") read:" + csvRowCells);
+				this.appLogger.logInfo("columns(" + csvRowCells.size() + ") read:" + csvRowCells);
 			}
 
 			int csvDataRow = 0;
@@ -53,23 +53,31 @@ public class CsvFileUtils extends SimpleAppLogger {
 					// A Valid end of the line
 					csvFileBuilder.append(";");
 				}
-				// logInfo("csv(" + csvDataRow + ") row read:" + csvLine);
+
+				if (this.appLogger.getVerboseLevel() > 2) {
+					this.appLogger.logInfo("csv(" + csvDataRow + ") row read:" + csvLine);
+				}
+
 				csvDataRow++;
 				if (csvDataRow % 100 == 0 && csvDataRow > 0) {
-					logInfo(csvDataRow + " lines read");
+					this.appLogger.logInfo(csvDataRow + " lines read");
 				}
 			}
 
-			logInfo("Total " + csvDataRow + " lines read");
+			this.appLogger.logInfo("Total " + csvDataRow + " lines read");
 			csvRowCells = Arrays
-					.asList(csvFileBuilder.toString().split(appProperties.getProperty("csvCellDelimiterRegex")));
+					.asList(csvFileBuilder.toString().split(this.appProperties.getProperty("csvCellDelimiterRegex")));
 			if (csvRowCells.size() > 0) {
 				// removes the quotes from the first and the last element
 				removeSymbolsFromACell(csvRowCells, 0, 1, csvRowCells.get(0).length());
 				removeSymbolsFromACell(csvRowCells, csvRowCells.size() - 1, 0,
 						csvRowCells.get(csvRowCells.size() - 1).length() - 2);
 			}
-			// logInfo("csv data read:" + csvRowCells);
+
+			if (this.appLogger.getVerboseLevel() > 2) {
+				this.appLogger.logInfo("csv data read:" + csvRowCells);
+			}
+
 			parcedCSVdoc.put("dataCells", csvRowCells);
 		} finally {
 			if (csvReader != null) {
@@ -79,10 +87,11 @@ public class CsvFileUtils extends SimpleAppLogger {
 		return parcedCSVdoc;
 	}
 
-	public void writeCsvFile(Map<String, String> cmdArguments, Map<String, List<String>> dbData, String csvFileName)
-			throws Exception {
+	@Override
+	public void writeToFile(Map<String, List<String>> dbData) throws Exception {
 		Writer writer = null;
 		try {
+			String csvFileName = this.cmdArguments.get(this.appProperties.getProperty("rParamFile"));
 			writer = new OutputStreamWriter(new FileOutputStream(csvFileName), StandardCharsets.UTF_8);
 
 			// 1. write the columns names in the first row of the cs-file
@@ -112,7 +121,7 @@ public class CsvFileUtils extends SimpleAppLogger {
 	}
 
 	private String createCsvRow(List<String> dbRow) {
-		String csvDefaultSeparator = appProperties.getProperty("csvCellDelimiter");
+		String csvDefaultSeparator = this.appProperties.getProperty("csvCellDelimiter");
 		StringBuilder rowBuilder = null;
 
 		if (dbRow != null && dbRow.size() > 0) {

@@ -1,4 +1,4 @@
-package com.proxiad.comdirect.util.csvtool;
+package com.proxiad.comdirect.util.csvtool.db;
 
 import java.io.IOException;
 import java.io.InputStream;
