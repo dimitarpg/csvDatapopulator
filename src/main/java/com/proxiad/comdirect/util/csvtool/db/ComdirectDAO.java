@@ -45,9 +45,9 @@ public class ComdirectDAO {
 				String eachSqlstatemetn = sqlStatements.get(i);
 				sqlStatemetn = connection.prepareStatement(eachSqlstatemetn);
 
-//				if (appLogger.getVerboseLevel() > 1) {
+				if (appLogger.getVerboseLevel() > 1) {
 					appLogger.logInfo("execute sql satement {" + i + "}: " + eachSqlstatemetn);
-//				}
+				}
 
 				sqlStatemetn.execute();
 			}
