@@ -18,7 +18,7 @@ public class SimpleAppLogger {
 	}
 
 	public void logInfo(Object string) {
-		if (this.isVerboseEnable()) {
+		if (this.verboseEnable) {
 			System.out.println(string);
 		}
 	}
@@ -33,20 +33,12 @@ public class SimpleAppLogger {
 		}
 	}
 
-	public static void logError(Object string) {
-		System.out.println(string);
-	}
-
 	public int getVerboseLevel() {
 		return verboseLevel;
 	}
 
 	public void setVerboseLevel(int verboseLevel) {
 		this.verboseLevel = verboseLevel;
-	}
-
-	public boolean isVerboseEnable() {
-		return verboseEnable;
 	}
 
 	public void setVerboseEnable(boolean verboseEnable) {

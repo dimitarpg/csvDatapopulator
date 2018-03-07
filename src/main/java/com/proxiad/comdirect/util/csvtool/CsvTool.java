@@ -49,7 +49,7 @@ public class CsvTool {
 				String appOperation = cmdArguments.get(R_PARAM_OPERATION);
 
 				if (appOperation.equalsIgnoreCase(DB_EXPORT_ACTION)) {
-					appLogger.logInfo("[EXPORT DATA]");
+					appLogger.logInfo("[EXPORT DB DATA]");
 					fileProcessor = new CsvFileProcessor(appProperties, cmdArguments);
 
 					appLogger.logInfo("start db extraction--");
@@ -62,7 +62,7 @@ public class CsvTool {
 
 				} else if (appOperation.equalsIgnoreCase(CSV_IMPORT_ACTION)) {
 					fileProcessor = new CsvFileProcessor(appProperties, cmdArguments);
-					appLogger.logInfo("[IMPORT DATA]");
+					appLogger.logInfo("[IMPORT CSV FILE]");
 
 					appLogger.logInfo("start csv processign--");
 					Map<String, List<String>> parcedCSVdoc = fileProcessor.readFile();
@@ -72,6 +72,7 @@ public class CsvTool {
 					cDao.writeDbData(parcedCSVdoc);
 					appLogger.logInfo("finish db population--");
 				} else if (appOperation.equalsIgnoreCase(SQL_IMPORT_ACTION)) {
+					appLogger.logInfo("[IMPORT SQL FILE]");
 
 					appLogger.logInfo("start sql processign--");
 					fileProcessor = new SqlFileProcessor(appProperties, cmdArguments);
@@ -138,7 +139,6 @@ public class CsvTool {
 				} else {
 					throw new Exception("Missing argument:-a");
 				}
-
 				if (cmdArgumentsList.contains(R_PARAM_OPERATION)) {
 					key = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_OPERATION));
 					value = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_OPERATION) + 1);
@@ -146,7 +146,6 @@ public class CsvTool {
 				} else {
 					throw new Exception("Missing argument: -op");
 				}
-
 				if (cmdArgumentsList.contains(R_PARAM_TABLE)) {
 					key = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_TABLE));
 					value = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_TABLE) + 1);
