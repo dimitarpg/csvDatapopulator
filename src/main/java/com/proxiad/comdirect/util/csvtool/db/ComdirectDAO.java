@@ -6,6 +6,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -32,25 +33,24 @@ public class ComdirectDAO {
 
 	public void executeSQLStatements(List<String> sqlStatements) throws Exception {
 		Connection connection = null;
-		PreparedStatement sqlStatemetn = null;
+		Statement sqlStatemetn = null;
 		try {
 			JdbcConnection jdbcConnection = JdbcConnection.getInstance(
 					this.arguments.get(this.appProperties.get("rParamAddress")),
 					this.arguments.get(this.appProperties.get("rParamUser")),
 					this.arguments.get(this.appProperties.get("rParamPass")));
-
 			connection = jdbcConnection.getConnection();
+			sqlStatemetn = connection.createStatement();
+			int i = 0;
 
-			for (int i = 0; i < sqlStatements.size(); i++) {
-				String eachSqlstatemetn = sqlStatements.get(i);
-				sqlStatemetn = connection.prepareStatement(eachSqlstatemetn);
-
+			for (String eachSqlstatemetn : sqlStatements) {
+				sqlStatemetn.addBatch(eachSqlstatemetn);
 				if (appLogger.getVerboseLevel() > 1) {
-					appLogger.logInfo("execute sql satement {" + i + "}: " + eachSqlstatemetn);
+					appLogger.logInfo("execute sql satement {" + i++ + "}: " + eachSqlstatemetn);
 				}
-
-				sqlStatemetn.execute();
 			}
+
+			sqlStatemetn.executeBatch();
 		} finally {
 			JdbcConnection.closeConnection(connection, sqlStatemetn, null);
 		}
@@ -187,7 +187,7 @@ public class ComdirectDAO {
 				insertSt = connection.prepareStatement(stmt);
 
 				if (appLogger.getVerboseLevel() > 1) {
-					appLogger.logInfo("execute insert statemet{" + i + "}: " + insertSt.toString());
+					appLogger.logInfo("execute insert statemet{" + i + "}: " + stmt);
 				}
 
 				insertSt.executeUpdate();

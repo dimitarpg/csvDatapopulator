@@ -26,8 +26,6 @@ public class SqlFileProcessor extends FileProcessor {
 		StringBuilder sqlStatementBuilder = new StringBuilder();
 		Map<String, List<String>> processedSqlFile = null;
 
-		// String csvLine = null;
-
 		try {
 			sqlFileReader = new Scanner(new File(this.cmdArguments.get(this.appProperties.get("rParamFile"))));
 			processedSqlFile = new HashMap<String, List<String>>();
@@ -61,7 +59,7 @@ public class SqlFileProcessor extends FileProcessor {
 					finalSqlStatements.addAll(Arrays.asList(pSqlStatemets));
 
 					if (this.appLogger.getVerboseLevel() > 1) {
-						this.appLogger.logInfo("sql statements : " + Arrays.asList(pSqlStatemets));
+						this.appLogger.logInfo("sql-chunks: " + Arrays.asList(pSqlStatemets));
 					}
 				}
 			}

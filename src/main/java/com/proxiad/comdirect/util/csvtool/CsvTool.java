@@ -37,23 +37,15 @@ public class CsvTool {
 	public static void main(String[] args) {
 		try {
 			Map<String, String> cmdArguments = processCommandLineArguments(args);
-			if (cmdArguments.get(PARAM_VERBOSE) != null) {
-				appLogger.setVerboseEnable(true);
-			}
-			if (cmdArguments.get(PARAM_VERBOSE_LEVEL_2) != null) {
-				appLogger.setVerboseLevel(2);
-			}
 			appLogger.logInfo("========================================================================");
 			appLogger.logInfo("CVS Tool START");
-
 			appProperties.load(CsvTool.class.getClassLoader().getResourceAsStream("app.properties"));
-			ComdirectDAO cDao = new ComdirectDAO(appProperties, cmdArguments);
-			FileProcessor fileProcessor;
 
 			if (cmdArguments.get(PARAM_HELP) != null) {
-				printCSVToolHelpMessage();
+				appLogger.logInfo(appProperties.get("toolHelpMessage"));
 			} else {
-
+				ComdirectDAO cDao = new ComdirectDAO(appProperties, cmdArguments);
+				FileProcessor fileProcessor;
 				String appOperation = cmdArguments.get(R_PARAM_OPERATION);
 
 				if (appOperation.equalsIgnoreCase(DB_EXPORT_ACTION)) {
@@ -103,25 +95,6 @@ public class CsvTool {
 		}
 	}
 
-	private static void printCSVToolHelpMessage() {
-		appLogger.logInfo("[The csv tool provides a functionality for reading and writing data from/to a csv file.]");
-		appLogger.logInfo("\n");
-		appLogger.logInfo(
-				"-a : the adress of the database used for the export/import process, provided in the format : 'myhost:1521:orcl'. ( REQUIRED parameter )");
-		appLogger.logInfo("-u/-p : username/password used for connection to the database.  ( REQUIRED parameter )");
-		appLogger.logInfo("-t : table name in the database.  ( REQUIRED parameter )");
-		appLogger.logInfo("-f : a .csv file used for the export/import process.  ( REQUIRED parameter )");
-		appLogger.logInfo(
-				"--clear : truncates the database table ( specified with the -t ) before the importing of data.");
-		appLogger.logInfo(
-				"--export : the 'export' action exports data from the database ( specified with the -a ) and import it in a .csv file ( -f ).\n The dafault action is 'import' which exports "
-						+ "the data from a csv file and imports it in the databse.");
-		appLogger.logInfo("--disable-transactions : disables the transactions by data-importing into the database.");
-		appLogger.logInfo("--verbose : allows verbose logging.");
-		appLogger.logInfo("--help : lists all the command line arguments used by the tool");
-		appLogger.logInfo("\n");
-	}
-
 	private static Map<String, String> processCommandLineArguments(String[] cmdArguments) throws Exception {
 		Map<String, String> argMap = new HashMap<String, String>();
 		if (cmdArguments.length == 0) {
@@ -131,6 +104,19 @@ public class CsvTool {
 			try {
 				String key;
 				String value;
+				if (cmdArgumentsList.contains(PARAM_VERBOSE)) {
+					argMap.put(PARAM_VERBOSE, "YES!");
+					appLogger.setVerboseEnable(true);
+				}
+				if (cmdArgumentsList.contains(PARAM_VERBOSE_LEVEL_2)) {
+					argMap.put(PARAM_VERBOSE, "YES!");
+					appLogger.setVerboseLevel(2);
+				}
+				if (cmdArgumentsList.contains(PARAM_HELP)) {
+					argMap.put(PARAM_HELP, "YES!");
+					return argMap;
+				}
+
 				if (cmdArgumentsList.contains(R_PARAM_USER)) {
 					key = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_USER));
 					value = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_USER) + 1);
@@ -152,20 +138,24 @@ public class CsvTool {
 				} else {
 					throw new Exception("Missing argument:-a");
 				}
-				if (cmdArgumentsList.contains(R_PARAM_TABLE)) {
-					key = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_TABLE));
-					value = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_TABLE) + 1);
-					argMap.put(key, value);
-				} else {
-					throw new Exception("Missing argument: -t");
-				}
 
 				if (cmdArgumentsList.contains(R_PARAM_OPERATION)) {
 					key = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_OPERATION));
 					value = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_OPERATION) + 1);
 					argMap.put(key, value);
 				} else {
-					throw new Exception("Missing argument: -f");
+					throw new Exception("Missing argument: -op");
+				}
+
+				if (cmdArgumentsList.contains(R_PARAM_TABLE)) {
+					key = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_TABLE));
+					value = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_TABLE) + 1);
+					argMap.put(key, value);
+				} else {
+					// -t is not required argument if the operation is SQL_IMPORT_ACTION
+					if (!argMap.get(R_PARAM_OPERATION).equalsIgnoreCase(SQL_IMPORT_ACTION)) {
+						throw new Exception("Missing argument: -t");
+					}
 				}
 
 				if (cmdArgumentsList.contains(R_PARAM_FILE)) {
@@ -180,19 +170,9 @@ public class CsvTool {
 				if (cmdArgumentsList.contains(PARAM_CLEAR)) {
 					argMap.put(PARAM_CLEAR, "YES!");
 				}
-				if (cmdArgumentsList.contains(PARAM_VERBOSE)) {
-					argMap.put(PARAM_VERBOSE, "YES!");
-				}
-				if (cmdArgumentsList.contains(PARAM_VERBOSE_LEVEL_2)) {
-					argMap.put(PARAM_VERBOSE, "YES!");
-				}
 				if (cmdArgumentsList.contains(PARAM_DISABLE_TRANSACTIONS)) {
 					argMap.put(PARAM_DISABLE_TRANSACTIONS, "YES!");
 				}
-				if (cmdArgumentsList.contains(PARAM_HELP)) {
-					argMap.put(PARAM_HELP, "YES!");
-				}
-
 			} catch (IndexOutOfBoundsException ex) {
 				throw new Exception("Arguments missmatch!");
 			}
