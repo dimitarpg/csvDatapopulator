@@ -89,7 +89,7 @@ public class CsvTool {
 		} catch (Exception e) {
 			appLogger.logInfo("===FAIL==");
 			e.printStackTrace();
-			System.exit(0);
+			System.exit(1);
 		} finally {
 			appLogger.logInfo("CVS Tool FINISH");
 			appLogger.logInfo("========================================================================");
