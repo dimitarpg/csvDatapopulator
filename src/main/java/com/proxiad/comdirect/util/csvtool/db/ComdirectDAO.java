@@ -151,7 +151,7 @@ public class ComdirectDAO {
 	public void writeDbData(Map<String, List<String>> data) throws Exception {
 		String stmt = null;
 		Connection connection = null;
-		PreparedStatement insertSt = null;
+		Statement insertSt = null;
 		try {
 			JdbcConnection jdbcConnection = JdbcConnection.getInstance(
 					this.arguments.get(this.appProperties.get("rParamAddress")),
@@ -159,11 +159,11 @@ public class ComdirectDAO {
 					this.arguments.get(this.appProperties.get("rParamPass")));
 
 			connection = jdbcConnection.getConnection();
+			insertSt = connection.createStatement();
 
 			if (this.arguments.get(this.appProperties.get("paramClear")) != null) {
 				stmt = "DELETE FROM " + this.arguments.get(this.appProperties.get("rParamTable"));
-				insertSt = connection.prepareStatement(stmt);
-				insertSt.executeUpdate();
+				insertSt.execute(stmt);
 			}
 
 			if (this.arguments.get(this.appProperties.get("disableTransactions")) != null) {
@@ -184,14 +184,14 @@ public class ComdirectDAO {
 				stmt = (String) this.appProperties.get("insertStatement");
 				stmt = String.format(stmt, this.arguments.get(this.appProperties.get("rParamTable")), columnCells,
 						insertValues);
-				insertSt = connection.prepareStatement(stmt);
 
 				if (appLogger.getVerboseLevel() > 1) {
 					appLogger.logInfo("execute insert statemet{" + i + "}: " + stmt);
 				}
 
-				insertSt.executeUpdate();
+				insertSt.addBatch(stmt);
 			}
+			insertSt.executeBatch();
 
 			if (this.arguments.get(this.appProperties.get("disableTransactions")) != null) {
 				connection.commit();

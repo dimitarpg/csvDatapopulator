@@ -110,11 +110,13 @@ public class CsvTool {
 					appLogger.setVerboseEnable(true);
 				}
 				if (cmdArgumentsList.contains(PARAM_VERBOSE_LEVEL_2)) {
-					argMap.put(PARAM_VERBOSE, "YES!");
+					argMap.put(PARAM_VERBOSE_LEVEL_2, "YES!");
 					appLogger.setVerboseLevel(2);
 				}
 				if (cmdArgumentsList.contains(PARAM_HELP)) {
 					argMap.put(PARAM_HELP, "YES!");
+					argMap.put(PARAM_VERBOSE, "YES!");
+					appLogger.setVerboseEnable(true);
 					return argMap;
 				}
 
