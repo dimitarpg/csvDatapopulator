@@ -56,7 +56,7 @@ public class ComdirectDAO {
 		}
 	}
 
-	public Map<String, List<String>> readDbData() throws Exception {
+	public Map<String, List<String>> readDbData(boolean withPredefinedSQL) throws Exception {
 		Connection connection = null;
 		PreparedStatement selectAllStatement = null;
 		ResultSet resultSet = null;
@@ -71,8 +71,13 @@ public class ComdirectDAO {
 
 			connection = jdbcConnection.getConnection();
 
-			String stmt = String.format(" SELECT * FROM %s ",
-					this.arguments.get(this.appProperties.get("rParamTable")));
+			String stmt;
+			if (withPredefinedSQL) {
+				stmt = this.arguments.get(this.appProperties.get("rParamSql"));
+			} else {
+				stmt = String.format(" SELECT * FROM %s ", this.arguments.get(this.appProperties.get("rParamTable")));
+			}
+
 			selectAllStatement = connection.prepareStatement(stmt);
 			resultSet = selectAllStatement.executeQuery(stmt);
 
@@ -238,5 +243,4 @@ public class ComdirectDAO {
 			return null;
 		}
 	}
-
 }

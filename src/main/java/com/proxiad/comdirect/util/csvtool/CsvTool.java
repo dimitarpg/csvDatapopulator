@@ -23,13 +23,16 @@ public class CsvTool {
 	private static final String PARAM_HELP = "--help";
 
 	private static final String R_PARAM_TABLE = "-t";
+	private static final String R_PARAM_SQL_SCRIPT = "-sql";
 	private static final String R_PARAM_OPERATION = "-op";
 	private static final String R_PARAM_USER = "-u";
 	private static final String R_PARAM_PASS = "-p";
 	private static final String R_PARAM_ADDRESS = "-a";
 	private static final String R_PARAM_FILE = "-f";
 
-	private static final String DB_EXPORT_ACTION = "dbExport";
+	private static final String DB_EXPORT_ACTION = "dbExportTable";
+	private static final String DB_EXPORT_SQL_ACTION = "dbExportSql";
+
 	private static final String SQL_IMPORT_ACTION = "sqlImport";
 	private static final String CSV_IMPORT_ACTION = "csvImport";
 	// TODO several threads for writing in the db
@@ -48,18 +51,23 @@ public class CsvTool {
 				FileProcessor fileProcessor;
 				String appOperation = cmdArguments.get(R_PARAM_OPERATION);
 
-				if (appOperation.equalsIgnoreCase(DB_EXPORT_ACTION)) {
+				if (appOperation.equalsIgnoreCase(DB_EXPORT_SQL_ACTION)
+						|| appOperation.equalsIgnoreCase(DB_EXPORT_ACTION)) {
 					appLogger.logInfo("[EXPORT DB DATA]");
 					fileProcessor = new CsvFileProcessor(appProperties, cmdArguments);
 
 					appLogger.logInfo("start db extraction--");
-					Map<String, List<String>> dbData = cDao.readDbData();
+					Map<String, List<String>> dbData;
+					if (appOperation.equalsIgnoreCase(DB_EXPORT_SQL_ACTION)) {
+						dbData = cDao.readDbData(true);
+					} else {
+						dbData = cDao.readDbData(false);
+					}
 					appLogger.logInfo("finish db extraction--");
 
 					appLogger.logInfo("start csv creation--");
 					fileProcessor.writeToFile(dbData);
 					appLogger.logInfo("start csv creation--");
-
 				} else if (appOperation.equalsIgnoreCase(CSV_IMPORT_ACTION)) {
 					fileProcessor = new CsvFileProcessor(appProperties, cmdArguments);
 					appLogger.logInfo("[IMPORT CSV FILE]");
@@ -153,8 +161,20 @@ public class CsvTool {
 					value = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_TABLE) + 1);
 					argMap.put(key, value);
 				} else {
-					// -t is not required argument if the operation is SQL_IMPORT_ACTION
-					if (!argMap.get(R_PARAM_OPERATION).equalsIgnoreCase(SQL_IMPORT_ACTION)) {
+					// -t is not required argument if the operation is SQL_IMPORT_ACTION or
+					// DB_EXPORT_SQL_ACTION
+					if (!argMap.get(R_PARAM_OPERATION).equalsIgnoreCase(SQL_IMPORT_ACTION)
+							&& !argMap.get(R_PARAM_OPERATION).equalsIgnoreCase(DB_EXPORT_SQL_ACTION)) {
+						throw new Exception("Missing argument: -t");
+					}
+				}
+				if (cmdArgumentsList.contains(R_PARAM_SQL_SCRIPT)) {
+					key = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_SQL_SCRIPT));
+					value = cmdArgumentsList.get(cmdArgumentsList.indexOf(R_PARAM_SQL_SCRIPT) + 1);
+					argMap.put(key, value);
+				} else {
+					// -sql is required argument if the operation is DB_EXPORT_SQL_ACTION
+					if (argMap.get(R_PARAM_OPERATION).equalsIgnoreCase(DB_EXPORT_SQL_ACTION)) {
 						throw new Exception("Missing argument: -t");
 					}
 				}
